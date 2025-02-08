@@ -1,3 +1,4 @@
+import re
 import unittest
 
 from django.conf import settings
@@ -6,11 +7,13 @@ from django.test.utils import override_settings
 from django.urls import reverse, reverse_lazy
 
 from wagtail.admin.rich_text import DraftailRichTextArea, get_rich_text_editor_widget
-from wagtail.admin.rich_text.converters.editor_html import (
-    EditorHTMLConverter,
-    PageLinkHandler,
-)
+from wagtail.admin.rich_text.converters.editor_html import (EditorHTMLConverter,
+                                                            PageLinkHandler)
 from wagtail.admin.rich_text.editors.draftail.features import Feature
+from wagtail.admin.wagtail_hooks import ProcessPastedLinksFinder
+
+# Para acessar a função process_pasted_links
+process_pasted_links = ProcessPastedLinksFinder.process_pasted_links
 from wagtail.blocks import RichTextBlock
 from wagtail.models import Page, get_page_models
 from wagtail.rich_text import RichText
@@ -636,3 +639,22 @@ class TestRichTextChooserUrls(WagtailTestUtils, BaseRichTextEditHandlerTestCase)
         self.assertIn("/admin/images/chooser/", html)
         self.assertIn("/admin/embeds/chooser/", html)
         self.assertIn("/admin/documents/chooser/", html)
+
+def normalize_html(html):
+    """Remove espaços extras e normaliza a formatação para comparação."""
+    return re.sub(r'\s+', ' ', html).strip()
+
+class RichTextMailtoPasteTest(TestCase):
+    def test_preserve_http_https_and_anchor_links(self):
+        html_input = """
+        <a href="https://example.com">Site</a>
+        <a href="mailto:test@example.com">Email</a>
+        <a href="#section1">Anchor</a>
+        """
+        expected_output = normalize_html(html_input)
+
+        result = normalize_html(process_pasted_links(html_input))
+        self.assertEqual(result, expected_output)
+
+
+

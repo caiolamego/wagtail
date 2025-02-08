@@ -1,3 +1,5 @@
+import re
+
 from django.conf import settings
 from django.contrib.auth.models import Permission
 from django.urls import reverse, reverse_lazy
@@ -9,61 +11,36 @@ from draftjs_exporter.dom import DOM
 
 import wagtail.admin.rich_text.editors.draftail.features as draftail_features
 from wagtail import __version__, hooks
-from wagtail.admin.admin_url_finder import (
-    ModelAdminURLFinder,
-    register_admin_url_finder,
-)
+from wagtail.admin.admin_url_finder import (ModelAdminURLFinder,
+                                            register_admin_url_finder)
 from wagtail.admin.auth import user_has_any_page_permission
 from wagtail.admin.forms.collections import GroupCollectionManagementPermissionFormSet
-from wagtail.admin.menu import (
-    DismissibleMenuItem,
-    DismissibleSubmenuMenuItem,
-    MenuItem,
-    SubmenuMenuItem,
-    help_menu,
-    reports_menu,
-    settings_menu,
-)
+from wagtail.admin.menu import (DismissibleMenuItem, DismissibleSubmenuMenuItem,
+                                MenuItem, SubmenuMenuItem, help_menu, reports_menu,
+                                settings_menu)
 from wagtail.admin.rich_text.converters.contentstate import link_entity
-from wagtail.admin.rich_text.converters.editor_html import (
-    LinkTypeRule,
-    PageLinkHandler,
-    WhitelistRule,
-)
+from wagtail.admin.rich_text.converters.editor_html import (LinkTypeRule,
+                                                            PageLinkHandler,
+                                                            WhitelistRule)
 from wagtail.admin.rich_text.converters.html_to_contentstate import (
-    BlockElementHandler,
-    ExternalLinkElementHandler,
-    HorizontalRuleHandler,
-    InlineStyleElementHandler,
-    ListElementHandler,
-    ListItemElementHandler,
-    PageLinkElementHandler,
-)
+    BlockElementHandler, ExternalLinkElementHandler, HorizontalRuleHandler,
+    InlineStyleElementHandler, ListElementHandler, ListItemElementHandler,
+    PageLinkElementHandler)
 from wagtail.admin.search import SearchArea
 from wagtail.admin.site_summary import PagesSummaryItem
-from wagtail.admin.ui.sidebar import (
-    PageExplorerMenuItem as PageExplorerMenuItemComponent,
-)
+from wagtail.admin.ui.sidebar import \
+    PageExplorerMenuItem as PageExplorerMenuItemComponent
 from wagtail.admin.ui.sidebar import SubMenuItem as SubMenuItemComponent
-from wagtail.admin.views.pages.bulk_actions import (
-    DeleteBulkAction,
-    MoveBulkAction,
-    PublishBulkAction,
-    UnpublishBulkAction,
-)
+from wagtail.admin.views.pages.bulk_actions import (DeleteBulkAction, MoveBulkAction,
+                                                    PublishBulkAction,
+                                                    UnpublishBulkAction)
 from wagtail.admin.viewsets import viewsets
 from wagtail.admin.widgets import ButtonWithDropdownFromHook, PageListingButton
 from wagtail.models import Collection, Page, Task, Workflow
-from wagtail.permissions import (
-    collection_permission_policy,
-    page_permission_policy,
-    task_permission_policy,
-    workflow_permission_policy,
-)
+from wagtail.permissions import (collection_permission_policy, page_permission_policy,
+                                 task_permission_policy, workflow_permission_policy)
 from wagtail.templatetags.wagtailcore_tags import (
-    wagtail_feature_release_editor_guide_link,
-    wagtail_feature_release_whats_new_link,
-)
+    wagtail_feature_release_editor_guide_link, wagtail_feature_release_whats_new_link)
 from wagtail.utils.version import get_main_version
 from wagtail.whitelist import allow_without_attributes, attribute_rule, check_url
 
@@ -1207,3 +1184,14 @@ for action_class in [
     UnpublishBulkAction,
 ]:
     hooks.register("register_bulk_action", action_class)
+
+class ProcessPastedLinksFinder:
+    @staticmethod
+    def process_pasted_links(html):
+        allowed_protocols = ["mailto:", "http:", "https:", "#"]
+        pattern = r'<a href=[\'"](?!' + "|".join(re.escape(p) for p in allowed_protocols) + r')[^\'"]+[\'"].*?</a>'
+        
+        cleaned_html = re.sub(pattern, '', html)
+
+        return cleaned_html.strip()
+
